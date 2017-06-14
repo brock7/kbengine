@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -85,7 +85,7 @@ void Machine::onBroadcastInterface(Network::Channel* pChannel, int32 uid, std::s
 									uint64 extradata1, uint64 extradata2, uint64 extradata3, uint32 backRecvAddr, uint16 backRecvPort)
 {
 	// 先查询一下是否存在相同身份，如果是相同身份且不是一个进程我们需要告知对方启动非法
-	const Components::ComponentInfos* pinfos = Components::getSingleton().findComponent(componentID);
+	Components::ComponentInfos* pinfos = Components::getSingleton().findComponent(componentID);
 	if(pinfos && isGameServerComponentType((COMPONENT_TYPE)componentType) && checkComponentUsable(pinfos, false, true))
 	{
 		if(pinfos->pid != pid || pinfos->pIntAddr->ip != intaddr ||
@@ -131,9 +131,11 @@ void Machine::onBroadcastInterface(Network::Channel* pChannel, int32 uid, std::s
 		{
 			if(checkComponentUsable(pinfos, false, true))
 			{
-				WARNING_MSG(fmt::format("Machine::onBroadcastInterface: {} is already running, pid={}, uid={}!\n", 
-					COMPONENT_NAME_EX((COMPONENT_TYPE)componentType), pid, uid));
+				DEBUG_MSG(fmt::format("Machine::onBroadcastInterface: {} update, pid={}, uid={}, globalorderid={}, grouporderid={}!\n", 
+					COMPONENT_NAME_EX((COMPONENT_TYPE)componentType), pid, uid, globalorderid, grouporderid));
 
+				pinfos->globalOrderid = globalorderid;
+				pinfos->groupOrderid = grouporderid;
 				return;
 			}
 		}
@@ -141,7 +143,7 @@ void Machine::onBroadcastInterface(Network::Channel* pChannel, int32 uid, std::s
 		// 一台硬件上只能存在一个machine
 		if(componentType == MACHINE_TYPE)
 		{
-			WARNING_MSG("Machine::onBroadcastInterface: machine is already running!\n");
+			ERROR_MSG("Machine::onBroadcastInterface: A single computer cannot run multiple \"machine\" process!\n");
 			return;
 		}
 	

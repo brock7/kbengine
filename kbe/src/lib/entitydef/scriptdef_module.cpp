@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -517,6 +517,14 @@ bool ScriptDefModule::addPropertyDescription(const char* attrName,
 										  PropertyDescription* propertyDescription, 
 										  COMPONENT_TYPE componentType)
 {
+	if(hasMethodName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addPropertyDescription: There is a method[{}] name conflict! componentType={}.\n",
+			attrName, componentType));
+		
+		return false;
+	}
+	
 	PropertyDescription* f_propertyDescription = NULL;
 	PROPERTYDESCRIPTION_MAP*  propertyDescr;
 	PROPERTYDESCRIPTION_UIDMAP*  propertyDescr_uidmap;
@@ -819,6 +827,14 @@ MethodDescription* ScriptDefModule::findAliasMethodDescription(ENTITY_DEF_ALIASI
 bool ScriptDefModule::addCellMethodDescription(const char* attrName, 
 											   MethodDescription* methodDescription)
 {
+	if(hasPropertyName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addCellMethodDescription: There is a property[{}] name conflict!\n",
+			attrName));
+		
+		return false;
+	}
+	
 	MethodDescription* f_methodDescription = findCellMethodDescription(attrName);
 	if(f_methodDescription)
 	{
@@ -864,6 +880,14 @@ MethodDescription* ScriptDefModule::findBaseMethodDescription(ENTITY_METHOD_UID 
 bool ScriptDefModule::addBaseMethodDescription(const char* attrName, 
 											   MethodDescription* methodDescription)
 {
+	if(hasPropertyName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addBaseMethodDescription: There is a property[{}] name conflict!\n",
+			attrName));
+		
+		return false;
+	}
+	
 	MethodDescription* f_methodDescription = findBaseMethodDescription(attrName);
 	if(f_methodDescription)
 	{
@@ -911,6 +935,14 @@ MethodDescription* ScriptDefModule::findClientMethodDescription(ENTITY_METHOD_UI
 bool ScriptDefModule::addClientMethodDescription(const char* attrName, 
 												 MethodDescription* methodDescription)
 {
+	if(hasPropertyName(attrName))
+	{
+		ERROR_MSG(fmt::format("ScriptDefModule::addClientMethodDescription: There is a property[{}] name conflict!\n",
+			attrName));
+		
+		return false;
+	}
+	
 	MethodDescription* f_methodDescription = findClientMethodDescription(attrName);
 	if(f_methodDescription)
 	{
@@ -945,6 +977,22 @@ ScriptDefModule::PROPERTYDESCRIPTION_MAP& ScriptDefModule::getPropertyDescrs()
 	};
 	
 	return *lpPropertyDescrs;	
+}
+
+//-------------------------------------------------------------------------------------
+bool ScriptDefModule::hasPropertyName(const std::string& name)
+{
+	return findPropertyDescription(name.c_str(), CELLAPP_TYPE) ||
+		findPropertyDescription(name.c_str(), BASEAPP_TYPE) ||
+		findPropertyDescription(name.c_str(), CLIENT_TYPE); 
+}
+
+//-------------------------------------------------------------------------------------
+bool ScriptDefModule::hasMethodName(const std::string& name)
+{
+	return findMethodDescription(name.c_str(), CELLAPP_TYPE) ||
+		findMethodDescription(name.c_str(), BASEAPP_TYPE) ||
+		findMethodDescription(name.c_str(), CLIENT_TYPE);
 }
 
 //-------------------------------------------------------------------------------------

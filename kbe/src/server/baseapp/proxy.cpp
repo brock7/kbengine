@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -42,6 +42,7 @@ SCRIPT_METHOD_DECLARE("getClientType",					pyGetClientType,				METH_VARARGS,			0
 SCRIPT_METHOD_DECLARE("getClientDatas",					pyGetClientDatas,				METH_VARARGS,			0)
 SCRIPT_METHOD_DECLARE("streamStringToClient",			pyStreamStringToClient,			METH_VARARGS,			0)
 SCRIPT_METHOD_DECLARE("streamFileToClient",				pyStreamFileToClient,			METH_VARARGS,			0)
+SCRIPT_METHOD_DECLARE("disconnect",						pyDisconnect,					METH_VARARGS,			0)
 SCRIPT_METHOD_DECLARE_END()
 
 SCRIPT_MEMBER_DECLARE_BEGIN(Proxy)
@@ -81,6 +82,19 @@ Proxy::~Proxy()
 	kick();
 	SAFE_RELEASE(pProxyForwarder_);
 }
+
+//-------------------------------------------------------------------------------------
+PyObject* Proxy::pyDisconnect()
+{
+	Network::Channel* pChannel = Baseapp::getSingleton().networkInterface().findChannel(addr_);
+	if (pChannel && !pChannel->isDestroyed())
+	{
+		pChannel->condemn();
+	}
+
+	S_Return;
+}
+
 
 //-------------------------------------------------------------------------------------
 void Proxy::kick()

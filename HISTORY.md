@@ -1,3 +1,121 @@
+###v0.9.15
+
+	2017/6/12
+
+	新增与改善：
+		对loginapp部分功能在Linux使用select替换为poll，避免在Linux上产生的一些问题。（#489）
+		增加配置选项和实体属性entity.volatileInfo.optimized，可以取消实体位置同步优化，任何情况都同步Y，在房间内上下楼层型副本寻路可能有用。（#491）
+		增加写日志的异常处理，当磁盘被写满时会抛出IOException，防止应用程序意外退出。
+		简化跨进程传送流程，增加异步操作时的安全处理机制。
+		更新API文档。
+
+
+	BUG修正：
+		解决某些时候加载持久化的数组顺序不对的问题。
+
+
+
+###v0.9.14
+
+	2017/6/6
+
+	新增与改善：
+		cellapp增加支持registerReadFileDescriptor之类的API接口。
+		增加配置选项解决在端口映射环境强制暴露公网IP地址提供客户端登陆时，机器人程序不能直接走内网登陆问题。（#478）
+		log4cxx_properties日志配置文件可以在子项目中重写，避免多个不同子项目需要改动底层默认格式引起冲突。（#479）
+		当进程与logger异常断开连接后，一部分缓存待发送的log也将输出到日志文件中，避免遗漏关键错误日志。
+		导航模块同时支持unity插件导出的navmesh文件格式和recastnavigation原生的格式。
+		GUIConsole工具支持端口映射环境连接腾讯云、阿里云等环境的局域网内部KBE进程。
+		baseapp和dbmgr脚本增加onReadyForShutDown回调，允许控制进程安全退出的时机，具体参考API手册。
+		多组服务器允许共用一个账号系统。（#413）
+		更新API文档。
+
+
+	BUG修正：
+		解决部署进程数量特别多时， 由于端口竞争造成部分进程没有能成功提交自己的身份到machine问题。
+		修正邮箱认证输入错误邮箱没有错误提示（#480）
+		修正设置新密码，服务器回调错误（#481）
+		修正绑定邮箱请求服务器发送的email中地址是localhost（#483） 
+		修正x64版本下WebConsole的SpaceView功能异常的问题。
+		修正修改cellData后并没有标脏，导致主动调用writeToDB并没有及时存档
+		修正一些出错的情况下Channel未释放的问题。
+		修正loginapp脚本接口的错别字，onReuqestLogin改为onRequestLogin。
+
+
+
+###v0.9.13
+
+	2017/4/22
+
+	新增与改善：
+		解决safe_kill后日志会报Abnormal误报问题。(#466)  
+		更新API文档。
+
+
+	BUG修正：
+		修正WebConsole在Python2.x下的异常错误
+		修正部分平台上dbmgr连接interfaces出错的问题
+		修正assets/start_bots.sh启动环境设置错误问题
+		修正当没有cell的entity其base部分存存储时无法正确回调onWriteToDB(self, cellData)脚本的问题 
+
+
+
+###v0.9.12
+
+	2017/3/21
+
+	新增与改善：
+		Vector传输优化， 不需要记录size。(#430) 
+		增加支持在服务器调用玩家的disconnect功能断开客户端连接(entity.disconnect())
+		实体移动updatable和witness的updatable之间没有优先级，导致位置可能没有及时在同一帧更新(#461)
+		更新API文档。
+
+
+	BUG修正：
+		修正entitiesInAOI在极端情况产生异常。(#459)
+		修正配置中databaseInterfaces多个接口中存在注释时读取错误的问题 
+
+
+
+###v0.9.11
+
+	2017/2/25
+
+	新增与改善：
+		防止def中属性和方法重名。(#449) 
+		对坐标系统进行优化
+		installer.py脚本linux安装完善(#451)
+		entityID资源每次申请的段大小支持可配置（increasing_range）(#453)
+		移除引擎内部对Entity.topSpeed添加的冗余值，这个冗余值会对使用者产生Entity.topSpeed机制无效或不稳定的困扰。
+		更新API文档。
+
+
+	BUG修正：
+		修正将Account实体作为Player时断线重连重新获得控制权后客户端没有收到enterworld消息。(#454)
+		修正websocket协议在一个包数据不全时解析出错的问题
+		修正冻结账号后用户登陆返回的错误码并不是账号被冻结码
+		修正被控制的对象移动速度不受Entity.topSpeed限制的问题（#433）
+		修正FixedArray::insert在脚本层错误的只给了一个参数时导致错误，必须给入2个参数
+
+
+
+###v0.9.10
+
+	2017/1/24
+
+	新增与改善：
+		WebConsole支持在线查看游戏实时空间状态。 
+		对坐标系统进行优化
+		加强回调嵌套调用导致可能的意外的防护处理
+		更新API文档。
+
+
+	BUG修正：
+		修正cellapp中， 在实体__init__中输出位置总是为(0,0,0)。(#447)
+		修正使用Entity.entitiesInRange(5.0, None, None)这样的方式调用时，提示args(position) error!”错误的问题
+
+
+
 ###v0.9.9
 
 	2017/1/4

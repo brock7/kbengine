@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -94,6 +94,12 @@ Channel::SmartPoolObjectPtr Channel::createSmartPoolObj()
 void Channel::onReclaimObject()
 {
 	this->clearState();
+}
+
+//-------------------------------------------------------------------------------------
+void Channel::onEabledPoolObject()
+{
+
 }
 
 //-------------------------------------------------------------------------------------
@@ -801,9 +807,10 @@ void Channel::processPackets(KBEngine::Network::MessageHandlers* pMsgHandlers)
 		handshake();
 	}
 
+	BufferedReceives::iterator packetIter = bufferedReceives_.begin();
+	
 	try
 	{
-		BufferedReceives::iterator packetIter = bufferedReceives_.begin();
 		for(; packetIter != bufferedReceives_.end(); ++packetIter)
 		{
 			Packet* pPacket = (*packetIter);
@@ -825,7 +832,6 @@ void Channel::processPackets(KBEngine::Network::MessageHandlers* pMsgHandlers)
 		pPacketReader_->currMsgLen(0);
 		condemn();
 
-		BufferedReceives::iterator packetIter = bufferedReceives_.begin();
 		for (; packetIter != bufferedReceives_.end(); ++packetIter)
 		{
 			Packet* pPacket = (*packetIter);

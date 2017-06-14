@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -75,7 +75,6 @@ shouldAutoBackup_(1),
 creatingCell_(false),
 createdSpace_(false),
 inRestore_(false),
-pBufferedSendToCellappMessages_(NULL),
 pBufferedSendToClientMessages_(NULL),
 isDirty_(true),
 dbInterfaceIndex_(0)
@@ -94,7 +93,6 @@ Base::~Base()
 	S_RELEASE(clientMailbox_);
 	S_RELEASE(cellMailbox_);
 	S_RELEASE(cellDataDict_);
-	SAFE_RELEASE(pBufferedSendToCellappMessages_);
 	SAFE_RELEASE(pBufferedSendToClientMessages_);
 
 	if(Baseapp::getSingleton().pEntities())
@@ -450,11 +448,9 @@ PyObject* Base::createCellDataDict(uint32 flags)
 //-------------------------------------------------------------------------------------
 void Base::sendToCellapp(Network::Bundle* pBundle)
 {
-	KBE_ASSERT(cellMailbox_ != NULL);
-
-	if(pBufferedSendToCellappMessages_ && pBufferedSendToCellappMessages_->isStop())
+	if (!cellMailbox_)
 	{
-		pBufferedSendToCellappMessages_->pushMessages(pBundle);
+		ERROR_MSG(fmt::format("{}::sendToCellapp: no cell! entityID={}\n", this->scriptName(), id()));
 		return;
 	}
 
@@ -464,7 +460,14 @@ void Base::sendToCellapp(Network::Bundle* pBundle)
 //-------------------------------------------------------------------------------------
 void Base::sendToCellapp(Network::Channel* pChannel, Network::Bundle* pBundle)
 {
-	KBE_ASSERT(pChannel != NULL && pBundle != NULL);
+	if (!pChannel)
+	{
+		ERROR_MSG(fmt::format("{}::sendToCellapp: pChannel == NULL! entityID={}\n", this->scriptName(), id()));
+		return;
+	}
+
+	KBE_ASSERT(pBundle != NULL);
+
 	pChannel->send(pBundle);
 }
 
@@ -656,7 +659,11 @@ PyObject* Base::onScriptGetAttribute(PyObject* attr)
 	{
 		setDirty();
 	}
-
+	else if (strcmp(ccattr, "cellData") == 0)
+	{
+		setDirty();
+	}
+	
 	free(ccattr);
 	return ScriptObject::onScriptGetAttribute(attr);
 }	
@@ -1102,7 +1109,15 @@ void Base::onWriteToDBCallback(ENTITY_ID eid,
 		pyCallback = callbackMgr().take(callbackID);
 
 	if(dbid() <= 0)
+	{
 		dbid(dbInterfaceIndex, entityDBID);
+	}
+	
+	if (dbid() <= 0)
+	{
+		KBE_ASSERT(!success);
+		hasDB(false);
+	}
 
 	if(callbackID > 0)
 	{
@@ -1214,8 +1229,12 @@ void Base::onWriteToDB()
 {
 	SCOPED_PROFILE(SCRIPTCALL_PROFILE);
 
+	PyObject* cd = cellDataDict_;
+	if (!cd)
+		cd = Py_None;
+
 	SCRIPT_OBJECT_CALL_ARGS1(this, const_cast<char*>("onWriteToDB"), 
-		const_cast<char*>("O"), cellDataDict_);
+		const_cast<char*>("O"), cd);
 }
 
 //-------------------------------------------------------------------------------------
@@ -1475,7 +1494,7 @@ void Base::onTeleportSuccess(SPACE_ID spaceID)
 void Base::reqTeleportOther(Network::Channel* pChannel, ENTITY_ID reqTeleportEntityID, 
 							COMPONENT_ID reqTeleportEntityCellAppID, COMPONENT_ID reqTeleportEntityBaseAppID)
 {
-	if(pChannel->isExternal())
+	if (pChannel && pChannel->isExternal())
 		return;
 	
 	DEBUG_MSG(fmt::format("{2}::reqTeleportOther: reqTeleportEntityID={0}, reqTeleportEntityCellAppID={1}.\n",
@@ -1500,9 +1519,9 @@ void Base::reqTeleportOther(Network::Channel* pChannel, ENTITY_ID reqTeleportEnt
 		return;
 	}
 
-	if(pBufferedSendToCellappMessages_ || pBufferedSendToClientMessages_)
+	if (pBufferedSendToClientMessages_ || hasFlags(ENTITY_FLAGS_TELEPORT_START) || hasFlags(ENTITY_FLAGS_TELEPORT_END))
 	{
-		ERROR_MSG(fmt::format("{}::reqTeleportOther: {}, teleport error, is transfer, "
+		ERROR_MSG(fmt::format("{}::reqTeleportOther: {}, teleport error, in transit, "
 			"reqTeleportEntityID={}, reqTeleportEntityCellAppID={}.\n",
 			this->scriptName(), this->id(), reqTeleportEntityID, reqTeleportEntityCellAppID));
 
@@ -1520,111 +1539,82 @@ void Base::reqTeleportOther(Network::Channel* pChannel, ENTITY_ID reqTeleportEnt
 }
 
 //-------------------------------------------------------------------------------------
-void Base::onMigrationCellappStart(Network::Channel* pChannel, COMPONENT_ID cellappID)
+void Base::onMigrationCellappStart(Network::Channel* pChannel, COMPONENT_ID sourceCellAppID, COMPONENT_ID targetCellAppID)
 {
-	if(pChannel->isExternal())
+	if (pChannel && pChannel->isExternal())
 		return;
 	
-	DEBUG_MSG(fmt::format("{}::onTeleportCellappStart: {}, targetCellappID={}\n",
-		scriptName(), id(), cellappID));
+	DEBUG_MSG(fmt::format("{}::onMigrationCellappStart: {}, sourceCellAppID={}, targetCellappID={}\n",
+		scriptName(), id(), sourceCellAppID, targetCellAppID));
 
-	// cell部分开始跨cellapp迁移了， 此时baseapp发往cellapp的包都应该缓存
-	// 当onTeleportCellappEnd被调用时将缓存的包发往cell
+	if (hasFlags(ENTITY_FLAGS_TELEPORT_END))
+	{
+		removeFlags(ENTITY_FLAGS_TELEPORT_END);
 
-	if(pBufferedSendToCellappMessages_ == NULL)
-		pBufferedSendToCellappMessages_ = new BaseMessagesForwardCellappHandler(this);
-
-	pBufferedSendToCellappMessages_->stopForward();
-
-	addFlags(ENTITY_FLAGS_TELEPORT_START);
+		KBE_ASSERT(pBufferedSendToClientMessages_);
+		pBufferedSendToClientMessages_->startForward();
+	}
+	else
+	{
+		addFlags(ENTITY_FLAGS_TELEPORT_START);
+	}
 }
 
 //-------------------------------------------------------------------------------------
-void Base::onMigrationCellappArrived(Network::Channel* pChannel, COMPONENT_ID cellappID)
+void Base::onMigrationCellappEnd(Network::Channel* pChannel, COMPONENT_ID sourceCellAppID, COMPONENT_ID targetCellAppID)
 {
-	if(pChannel->isExternal())
+	if (pChannel && pChannel->isExternal())
 		return;
 	
-	DEBUG_MSG(fmt::format("{}::onTeleportCellappArrived: {}, targetCellappID={}\n",
-		scriptName(), id(), cellappID));
+	DEBUG_MSG(fmt::format("{}::onMigrationCellappEnd: {}, sourceCellAppID={}, targetCellappID={}\n",
+		scriptName(), id(), sourceCellAppID, targetCellAppID));
+
+	KBE_ASSERT(!pBufferedSendToClientMessages_);
 	
-	// 如果此时实体还没有被设置为ENTITY_FLAGS_TELEPORT_START,  说明onMigrationCellappArrived包优先于
-	// onMigrationCellappStart到达(某些压力所致的情况下会导致实体跨进程跳转时（由cell1跳转到cell2），
-	// 跳转前所产生的包会比cell2的enterSpace包慢到达)，因此发生这种情况时需要将cell2的包先缓存
-	// 等cell1的包到达后执行完毕再执行cell2的包
+	// 某些极端情况下可能onMigrationCellappStart会慢于onMigrationCellappEnd触发，此时必须设置标记
+	// 等待onMigrationCellappEnd触发后做清理
 	if (!hasFlags(ENTITY_FLAGS_TELEPORT_START))
 	{
-		if(pBufferedSendToClientMessages_ == NULL)
-			pBufferedSendToClientMessages_ = new BaseMessagesForwardClientHandler(this, cellappID);
-		
-		pBufferedSendToClientMessages_->stopForward();
-	}
+		addFlags(ENTITY_FLAGS_TELEPORT_END);
 
-	// 必须onMigrationCellappEnd没有执行过才有设置的价值
-	// 某些极端情况下可能onMigrationCellappArrived会慢于它触发
-	if (!hasFlags(ENTITY_FLAGS_TELEPORT_END))
-	{
-		addFlags(ENTITY_FLAGS_TELEPORT_ARRIVED);
+		if (pBufferedSendToClientMessages_ == NULL)
+			pBufferedSendToClientMessages_ = new BaseMessagesForwardClientHandler(this, targetCellAppID);
+
+		pBufferedSendToClientMessages_->stopForward();
 	}
 	else
 	{
-		DEBUG_MSG(fmt::format("{}::onTeleportCellappArrived: reset flags! {}, targetCellappID={}\n",
-			scriptName(), id(), cellappID));
-
-		// 这种状态下，pBufferedSendToClientMessages_一定为NULL
-		KBE_ASSERT(pBufferedSendToClientMessages_ == NULL);
-
 		removeFlags(ENTITY_FLAGS_TELEPORT_START);
-		removeFlags(ENTITY_FLAGS_TELEPORT_END);
+		onMigrationCellappOver(targetCellAppID);
 	}
-
 }
 
 //-------------------------------------------------------------------------------------
-void Base::onMigrationCellappEnd(Network::Channel* pChannel, COMPONENT_ID cellappID)
+void Base::onMigrationCellappOver(COMPONENT_ID targetCellAppID)
 {
-	if(pChannel->isExternal())
-		return;
+	Components::ComponentInfos* pInfos = Components::getSingleton().findComponent(targetCellAppID);
+	if (pInfos && pInfos->pChannel)
+	{
+		Network::Bundle* pBundle = Network::Bundle::createPoolObject();
+		(*pBundle).newMessage(CellappInterface::reqTeleportToCellAppOver);
+		(*pBundle) << id();
+		pInfos->pChannel->send(pBundle);
+	}
 	
-	DEBUG_MSG(fmt::format("{}::onTeleportCellappEnd: {}, targetCellappID={}\n",
-		scriptName(), id(), cellappID));
-
 	// 改变cell的指向到新的cellapp
-	this->cellMailbox()->componentID(cellappID);
-
-	// 某些极端情况下可能onMigrationCellappArrived会慢于onMigrationCellappEnd触发，此时必须设置标记
-	// 等待onMigrationCellappEnd触发后做清理
-	if (!hasFlags(ENTITY_FLAGS_TELEPORT_ARRIVED))
-	{
-		// 这种状态下，pBufferedSendToClientMessages_一定为NULL
-		KBE_ASSERT(pBufferedSendToClientMessages_ == NULL);
-		addFlags(ENTITY_FLAGS_TELEPORT_END);
-	}
-	else
-	{
-		removeFlags(ENTITY_FLAGS_TELEPORT_START);
-		removeFlags(ENTITY_FLAGS_TELEPORT_ARRIVED);
-
-		DEBUG_MSG(fmt::format("{}::onTeleportCellappEnd: reset flags! {}, targetCellappID={}\n",
-			scriptName(), id(), cellappID));
-	}
-
-	KBE_ASSERT(pBufferedSendToCellappMessages_);
-	pBufferedSendToCellappMessages_->startForward();
-	
-	if(pBufferedSendToClientMessages_)
-		pBufferedSendToClientMessages_->startForward();
+	if(this->cellMailbox())
+		this->cellMailbox()->componentID(targetCellAppID);
 }
 
 //-------------------------------------------------------------------------------------
 void Base::onBufferedForwardToCellappMessagesOver()
 {
-	SAFE_RELEASE(pBufferedSendToCellappMessages_);
 }
 
 //-------------------------------------------------------------------------------------
 void Base::onBufferedForwardToClientMessagesOver()
 {
+	onMigrationCellappOver(pBufferedSendToClientMessages_->cellappID());
 	SAFE_RELEASE(pBufferedSendToClientMessages_);
 }
 
@@ -1633,6 +1623,20 @@ void Base::onGetDBID(Network::Channel* pChannel, DBID dbid)
 {
 	if(pChannel->isExternal())
 		return;
+}
+
+//-------------------------------------------------------------------------------------
+void Base::onTimer(ScriptID timerID, int useraAgs)
+{
+	SCOPED_PROFILE(ONTIMER_PROFILE);
+	
+	PyObject* pyResult = PyObject_CallMethod(this, const_cast<char*>("onTimer"),
+		const_cast<char*>("Ii"), timerID, useraAgs);
+
+	if (pyResult != NULL)
+		Py_DECREF(pyResult);
+	else
+		SCRIPT_ERROR_CHECK();
 }
 
 //-------------------------------------------------------------------------------------

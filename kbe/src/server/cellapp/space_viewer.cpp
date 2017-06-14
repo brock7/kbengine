@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -206,7 +206,7 @@ void SpaceViewer::initClient()
 
 	// 先下发脚本ID对应脚本模块的名称，便于降低后面实体同步量，实体只同步id过去
 	const EntityDef::SCRIPT_MODULES& scriptModules = EntityDef::getScriptModules();
-	s << scriptModules.size();
+	s << (uint32)scriptModules.size();
 
 	EntityDef::SCRIPT_MODULES::const_iterator moduleIter = scriptModules.begin();
 	for (; moduleIter != scriptModules.end(); ++moduleIter)
@@ -257,7 +257,10 @@ void SpaceViewer::updateClient()
 
 			ViewEntity& viewEntity = viewerIter->second;
 			if (viewEntity.updateVersion > lastUpdateVersion_)
+			{
+				++viewerIter;
 				continue;
+			}
 
 			Entities<Entity>::ENTITYS_MAP::iterator iter = entitiesMap.find(viewerIter->first);
 

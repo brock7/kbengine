@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -250,10 +250,10 @@ public:
 	/** 网络接口
 		entity请求迁移到另一个cellapp上的过程开始和结束。
 	*/
-	void onMigrationCellappStart(Network::Channel* pChannel, COMPONENT_ID cellappID);
-	void onMigrationCellappArrived(Network::Channel* pChannel, COMPONENT_ID cellappID);
-	void onMigrationCellappEnd(Network::Channel* pChannel, COMPONENT_ID cellappID);
-
+	void onMigrationCellappStart(Network::Channel* pChannel, COMPONENT_ID sourceCellAppID, COMPONENT_ID targetCellAppID);
+	void onMigrationCellappEnd(Network::Channel* pChannel, COMPONENT_ID sourceCellAppID, COMPONENT_ID targetCellAppID);
+	void onMigrationCellappOver(COMPONENT_ID targetCellAppID);
+	
 	/**
 		设置获取是否自动存档
 	*/
@@ -331,9 +331,6 @@ protected:
 
 	// 是否正在恢复
 	bool									inRestore_;
-
-	// 在一些状态下(传送过程中)，发往cellapp的数据包需要被缓存, 合适的状态需要继续转发
-	BaseMessagesForwardCellappHandler*		pBufferedSendToCellappMessages_;
 	
 	// 如果此时实体还没有被设置为ENTITY_FLAGS_TELEPORT_START,  说明onMigrationCellappArrived包优先于
 	// onMigrationCellappStart到达(某些压力所致的情况下会导致实体跨进程跳转时（由cell1跳转到cell2），

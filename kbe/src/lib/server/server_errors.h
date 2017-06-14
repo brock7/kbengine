@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -69,7 +69,8 @@ typedef uint16 SERVER_ERROR_CODE;										// 错误码类别
 #define SERVER_ERR_USER10									34			// 用户自定义错误码10
 #define SERVER_ERR_LOCAL_PROCESSING							35			// 本地处理，通常为某件事情不由第三方处理而是由KBE服务器处理
 #define SERVER_ERR_ACCOUNT_RESET_PASSWORD_NOT_AVAILABLE		36			// 未开放账号重置密码功能。
-#define SERVER_ERR_MAX										37          // 请把这条放在所有错误的最后面，这本身不是一个错误标识，仅表示一共有多少条错误定义
+#define SERVER_ERR_ACCOUNT_LOGIN_ANOTHER_SERVER				37			// 当前账号在其他服务器登陆了
+#define SERVER_ERR_MAX										38          // 请把这条放在所有错误的最后面，这本身不是一个错误标识，仅表示一共有多少条错误定义
 
 const char SERVER_ERR_STR[][256] = {
 	"SERVER_SUCCESS",
@@ -108,7 +109,8 @@ const char SERVER_ERR_STR[][256] = {
 	"SERVER_ERR_USER9",
 	"SERVER_ERR_USER10",
 	"SERVER_ERR_LOCAL_PROCESSING",
-	"SERVER_ERR_ACCOUNT_RESET_PASSWORD_NOT_AVAILABLE"
+	"SERVER_ERR_ACCOUNT_RESET_PASSWORD_NOT_AVAILABLE",
+	"SERVER_ERR_ACCOUNT_LOGIN_ANOTHER_SERVER"
 };
 
 }

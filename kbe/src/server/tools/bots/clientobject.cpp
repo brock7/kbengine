@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -172,9 +172,12 @@ bool ClientObject::initCreate()
 //-------------------------------------------------------------------------------------
 bool ClientObject::initLoginBaseapp()
 {
-	Bots::getSingleton().networkInterface().dispatcher().deregisterReadFileDescriptor(*pTCPPacketReceiverEx_->pEndPoint());
+	if(pTCPPacketReceiverEx_)
+		Bots::getSingleton().networkInterface().dispatcher().deregisterReadFileDescriptor(*pTCPPacketReceiverEx_->pEndPoint());
+
 	pServerChannel_->stopSend();
 	pServerChannel_->pPacketSender(NULL);
+
 	SAFE_RELEASE(pTCPPacketSenderEx_);
 	SAFE_RELEASE(pTCPPacketReceiverEx_);
 
@@ -245,6 +248,12 @@ void ClientObject::gameTick()
 {
 	if(pServerChannel()->pEndPoint())
 	{
+		if(pServerChannel()->isCondemn())
+		{
+			destroy();
+			return;
+		}
+		
 		pServerChannel()->processPackets(NULL);
 	}
 	else
@@ -310,10 +319,8 @@ void ClientObject::gameTick()
 
 			break;
 		case C_STATE_PLAY:
-		
 			break;	
 		case C_STATE_DESTROYED:
-
 			return;
 		default:
 			KBE_ASSERT(false);
@@ -407,6 +414,11 @@ void ClientObject::onLoginBaseappFailed(Network::Channel * pChannel, SERVER_ERRO
 {
 	ClientObjectBase::onLoginBaseappFailed(pChannel, failedcode);
 	destroy();
+}
+
+//-------------------------------------------------------------------------------------
+void ClientObject::onLogin(Network::Bundle* pBundle)
+{
 }
 
 //-------------------------------------------------------------------------------------

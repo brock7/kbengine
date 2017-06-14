@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -732,7 +732,7 @@ bool Witness::update()
 	if(!pChannel)
 		return true;
 
-	if (aoiEntities_map_.size() > 0 || pEntity_->isControlledNotSelfCleint())
+	if (aoiEntities_map_.size() > 0 || pEntity_->isControlledNotSelfClient())
 	{
 		Network::Bundle* pSendBundle = pChannel->createSendBundle();
 		
@@ -867,7 +867,7 @@ bool Witness::update()
 //-------------------------------------------------------------------------------------
 void Witness::addBaseDataToStream(Network::Bundle* pSendBundle)
 {
-	if (pEntity_->isControlledNotSelfCleint())
+	if (pEntity_->isControlledNotSelfClient())
 	{
 		const Direction3D& bdir = baseDir();
 		Vector3 changeDir = bdir.dir - lastBaseDir_.dir;
@@ -1222,7 +1222,7 @@ uint32 Witness::getEntityVolatileDataUpdateFlags(Entity* otherEntity)
 	
 	if ((pVolatileInfo->position() > 0.f) && (entity_posdir_additional_updates == 0 || g_kbetime - otherEntity->posChangedTime() < entity_posdir_additional_updates))
 	{
-		if(!otherEntity->isOnGround())
+		if (!otherEntity->isOnGround() || !pVolatileInfo->optimized())
 		{
 			flags |= UPDATE_FLAG_XYZ; 
 		}

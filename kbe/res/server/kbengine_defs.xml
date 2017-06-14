@@ -384,6 +384,13 @@
 			-->
 			<default_layer> python </default_layer>
 		</telnet_service>
+		
+		<!-- entityID分配器，进入溢出范围则请求获取新的ID资源 
+			(The entityID allocator, enter the overflow area will get the new ID's)
+		-->
+		<ids>
+			<increasing_range> 2000 </increasing_range>				<!-- Type: Integer -->
+		</ids>
 	</dbmgr>
 	
 	<cellapp>
@@ -421,7 +428,7 @@
 			(The entityID allocator, enter the overflow area will get the new ID's)
 		-->
 		<ids>
-			<criticallyLowSize> 500 </criticallyLowSize>				<!-- Type: Integer -->
+			<criticallyLowSize> 1000 </criticallyLowSize>				<!-- Type: Integer -->
 		</ids>
 		
 		<!-- 程序的性能分析
@@ -572,7 +579,7 @@
 			(The entityID allocator, enter the overflow area will get the new ID's)
 		-->
 		<ids>
-			<criticallyLowSize> 500 </criticallyLowSize>				<!-- Type: Integer -->
+			<criticallyLowSize> 1000 </criticallyLowSize>				<!-- Type: Integer -->
 		</ids>
 		
 		<!-- 当灾难发生后，baseapp进行灾难恢复时，每次恢复entity的数量 
@@ -705,6 +712,7 @@
 		<account_type> 3 </account_type>
 		
 		<!-- http回调接口，处理认证、密码重置等 
+			（注意：http_cbhost一般会被引擎替换为externalInterface或者externalAddress，仅第一个loginapp才会开启这个服务）
 			(Http-callback interface, handling authentication, password reset, etc.)
 		-->
 		<http_cbhost> localhost </http_cbhost>
@@ -751,6 +759,13 @@
 			（Interface address specified, configurable NIC/MAC/IP） 
 		-->
 		<internalInterface>  </internalInterface>
+		
+		<!-- 对应baseapp的externalAddress的解决方案，当externalAddress强制下发公网IP提供登陆时，
+			如果局域网内部使用机器人测试也走公网IP和流量可能会不合适，此时可以设置为true，登陆时强制直接使用内网环境。
+			Corresponding to baseapp->externalAddress solution, when externalAddress mandatory release of the public network to provide landing IP,
+			If the use of robot within the LAN test also take the public network IP and traffic may be inappropriate, can be set to true, 
+			when landing forced to use the internal network environment. -->
+		<forceInternalLogin> false </forceInternalLogin>
 		
 		<!-- loginapp地址 
 			（loginapp address)

@@ -2,7 +2,7 @@
 This source file is part of KBEngine
 For the latest info, see http://www.kbengine.org/
 
-Copyright (c) 2008-2016 KBEngine.
+Copyright (c) 2008-2017 KBEngine.
 
 KBEngine is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -579,7 +579,9 @@ void Cellappmgr::querySpaces(Network::Channel* pChannel, MemoryStream& s)
 		Spaces& spaces = cellappref.spaces();
 
 		(*pBundle) << iter1->first;
-		(*pBundle) << spaces.size();
+		
+		// 如果不强制，则在win64下，它是8字节，而win32下是4字节
+		(*pBundle) << (uint32)spaces.size(); 
 
 		std::map<SPACE_ID, Space>& allSpaces = spaces.spaces();
 		std::map<SPACE_ID, Space>::iterator iter2 = allSpaces.begin();
@@ -592,7 +594,7 @@ void Cellappmgr::querySpaces(Network::Channel* pChannel, MemoryStream& s)
 
 			Cells& cells = space.cells();
 			std::map<CELL_ID, Cell>& allCells = cells.cells();
-			(*pBundle) << allCells.size();
+			(*pBundle) << (uint32)allCells.size(); 
 
 			std::map<CELL_ID, Cell>::iterator iter3 = allCells.begin();
 			for (; iter3 != allCells.end(); ++iter3)
